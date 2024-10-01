@@ -1,0 +1,586 @@
+---
+title: "**Ejercicio 4**"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fancyhdr}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhead{}
+  - \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+  - \fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+  - \fancypagestyle{plain}{
+      \fancyhead{}
+      \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+      \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+fontsize: 12pt
+geometry: margin=1in 
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\maketitle
+\vspace{-5em}
+\vspace{0.5em}
+```
+```{=tex}
+\begin{center}
+\footnotesize \textbf{Curso}: Econometría II \\
+\footnotesize \textbf{Profesor}: Mauricio Tejada \\
+\footnotesize \textbf{Estudiantes}: Dania Bustamante, Rosana Cardona, José Casanova \\
+\footnotesize 5 junio 2024 \\
+\end{center}
+```
+
+```{r include=FALSE}
+# Cargar las librerías necesarias
+library(readxl)
+library(dplyr)
+library(ggplot2)
+#install.packages("ggfortify")
+library(ggfortify)
+library(dynlm)
+library(forecast)
+library(kableExtra)
+
+# Leer los datos desde el archivo Excel
+base <- read_excel("pib_fbkf_chile.xlsx", skip = 2)
+colnames(base) <- c("Periodo", "fbcf", "PIB")
+base$Periodo <- as.Date(base$Periodo, format="%Y-%m-%d")
+```
+
+# Pregunta 1
+
+*Creación de variables*
+
+```{r echo=TRUE}
+base <- base %>%
+  mutate(log_PIB = log(PIB), log_fbcf = log(fbcf)) %>%
+  mutate(d_log_PIB = log_PIB - lag(log_PIB), 
+         d_log_fbcf = log_fbcf - lag(log_fbcf))%>%na.omit()
+
+head(base, 4)
+```
+
+```{r echo=TRUE}
+# Convertir a series de tiempo
+log_PIB_ts <- ts(base$log_PIB, start = c(1960, 1), frequency = 12)
+log_fbcf_ts <- ts(base$log_fbcf, start = c(1960, 1), frequency = 12)
+d_log_PIB_ts <- ts(base$d_log_PIB, start = c(1960, 1), frequency = 12)
+d_log_fbcf_ts <- ts(base$d_log_fbcf, start = c(1960, 1),frequency=12)
+```
+
+## *Gráficos series de tiempo*
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+library(ggplot2)
+
+# Definir un tema personalizado para hacer que los gráficos se vean bonitos
+theme_custom <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+```
+
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Gráfico de Log(PIB)
+ggplot(data = base, aes(x = Periodo, y = log_PIB)) +
+  geom_line(color = "black") +
+  labs(title = "Log(PIB)", x = "Periodo", y = "Log(PIB)") +
+  theme_custom
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Gráfico de Diferencia Logarítmica del PIB
+ggplot(data = base, aes(x = Periodo, y = d_log_PIB)) +
+  geom_line(color = "black") +
+  labs(title = "Diferencia Logarítmica del PIB", x = "Periodo", y = "Diferencia Logarítmica") +
+  theme_custom
+
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Gráfico de Log(FBCF)
+ggplot(data = base, aes(x = Periodo, y = log_fbcf)) +
+  geom_line(color = "black") +
+  labs(title = "Log(FBCF)", x = "Periodo", y = "Log(FBCF)") +
+  theme_custom
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Gráfico de Diferencia Logarítmica del FBCF
+ggplot(data = base, aes(x = Periodo, y = d_log_fbcf)) +
+  geom_line(color = "black") +
+  labs(title = "Diferencia Logarítmica del FBCF", x = "Periodo", y = "Diferencia Logarítmica") +
+  theme_custom
+
+```
+
+-   El gráfico muestra la evolución del logaritmo del PIB a lo largo del
+    tiempo. Se observa una tendencia ascendente a lo largo del período
+    analizado, indicando un crecimiento continuo del PIB en términos
+    logarítmicos.
+
+-   Diferencia Logarítmica del PIB: El gráfico de las diferencias
+    logarítmicas del PIB muestra fluctuaciones alrededor de cero. Esto
+    indica que, si bien el PIB tiene una tendencia ascendente, sus
+    cambios logarítmicos son estacionarios alrededor de un valor medio.
+
+-   Log(FBCF): Similar al PIB, el gráfico del logaritmo de la FBCF
+    muestra una tendencia ascendente a lo largo del tiempo. Esto indica
+    un crecimiento continuo de la FBCF en términos logarítmicos.
+
+-   Diferencia Logarítmica del FBCF: El gráfico de las diferencias
+    logarítmicas de la FBCF muestra fluctuaciones alrededor de cero.
+    Esto indica que, aunque la FBCF tiene una tendencia ascendente, sus
+    cambios logarítmicos son estacionarios alrededor de un valor medio.
+
+### *Funciones de autocorrelación*
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+library(ggplot2)
+
+# Calcular las autocorrelaciones
+acf_log_PIB <- acf(log_PIB_ts, plot = FALSE)
+acf_d_log_PIB <- acf(d_log_PIB_ts, plot = FALSE)
+acf_log_fbcf <- acf(log_fbcf_ts, plot = FALSE)
+acf_d_log_fbcf <- acf(d_log_fbcf_ts, plot = FALSE)
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Convertir los resultados a un data frame para su visualización con ggplot2
+acf_log_PIB_df <- data.frame(Lag = acf_log_PIB$lag, ACF = acf_log_PIB$acf)
+acf_d_log_PIB_df <- data.frame(Lag = acf_d_log_PIB$lag, ACF = acf_d_log_PIB$acf)
+acf_log_fbcf_df <- data.frame(Lag = acf_log_fbcf$lag, ACF = acf_log_fbcf$acf)
+acf_d_log_fbcf_df <- data.frame(Lag = acf_d_log_fbcf$lag, ACF = acf_d_log_fbcf$acf)
+```
+
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Definir un tema personalizado para hacer que los gráficos se vean bonitos
+theme_custom <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+  
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Graficar las funciones de autocorrelación
+ggplot(data = acf_log_PIB_df, aes(x = Lag, y = ACF)) +
+  geom_bar(stat = "identity", fill = "gray89") +
+  labs(title = "Función de Autocorrelación del Log(PIB)", x = "Lag", y = "ACF") +
+  theme_custom
+
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+ggplot(data = acf_d_log_PIB_df, aes(x = Lag, y = ACF)) +
+  geom_bar(stat = "identity", fill = "gray89") +
+  labs(title = "Función de Autocorrelación de la Diferencia Logarítmica del PIB", x = "Lag", y = "ACF") +
+  theme_custom
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+ggplot(data = acf_log_fbcf_df, aes(x = Lag, y = ACF)) +
+  geom_bar(stat = "identity", fill = "gray89") +
+  labs(title = "Función de Autocorrelación del Log(FBCF)", x = "Lag", y = "ACF") +
+  theme_custom
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+ggplot(data = acf_d_log_fbcf_df, aes(x = Lag, y = ACF)) +
+  geom_bar(stat = "identity", fill = "gray89") +
+  labs(title = "Función de Autocorrelación de la Diferencia Logarítmica del FBCF", x = "Lag", y = "ACF") +
+  theme_custom
+
+```
+
+-   *Función de Autocorrelación del Log(PIB):* Las autocorrelaciones
+    decrecen lentamente, lo que indica una alta persistencia en la serie
+    log(PBI). Esto sugiere que los valores pasados del log(PIB) tienen
+    una fuerte influencia en los valores futuros.
+
+-   *Función de Autocorrelación de la Diferencia Logarítmica del PIB:*
+    Las autocorrelaciones caen rápidamente a valores cercanos a cero
+    después de los primeros rezagos. Esto indica que la serie de
+    diferencias logarítmicas del PIB es estacionaria, con poca o ninguna
+    persistencia.
+
+-   *Función de Autocorrelación del Log(FBCF):* Similar al log(PIB), las
+    autocorrelaciones del log(FBCF) decrecen lentamente. Esto indica una
+    alta persistencia en la serie log(FBCF), sugiriendo que los valores
+    pasados tienen una fuerte influencia en los valores futuros.
+
+-   F*unción de Autocorrelación de la Diferencia Logarítmica del FBCF*:
+    Las autocorrelaciones de las diferencias logarítmicas del FBCF
+    también caen rápidamente a valores cercanos a cero. Esto indica que
+    la serie de diferencias logarítmicas de la FBCF es estacionaria, con
+    poca o ninguna persistencia.
+
+Tanto el log(PIB) como el log(FBCF) muestran alta persistencia, lo que
+indica que los valores pasados tienen una fuerte influencia en los
+valores futuros.
+
+*Estacionariedad en las Diferencias Logarítmicas:* Las series de
+diferencias logarítmicas del PIB y de la FBCF son estacionarias, lo que
+indica que los cambios logarítmicos no muestran persistencia y fluctúan
+alrededor de un valor medio constante. Estas observaciones sugieren que,
+mientras que las series logarítmicas muestran tendencias a largo plazo,
+sus diferencias logarítmicas se comportan de manera más aleatoria y
+estacionaria. Esto es consistente con la teoría de que las series de
+nivel (logarítmicas) pueden ser no estacionarias, pero sus diferencias
+logarítmicas tienden a ser estacionarias.
+
+# Pregunta 2
+
+```{r echo=FALSE}
+# Estimar modelos AR para $\Delta$log(PIB)
+model_ar1_pib <- dynlm(d_log_PIB_ts ~ L(d_log_PIB_ts, 1))
+model_ar2_pib <- dynlm(d_log_PIB_ts ~ L(d_log_PIB_ts, 1) + L(d_log_PIB_ts, 2))
+model_ar3_pib <- dynlm(d_log_PIB_ts ~ L(d_log_PIB_ts, 1) + L(d_log_PIB_ts, 2) + L(d_log_PIB_ts, 3))
+model_ar4_pib <- dynlm(d_log_PIB_ts ~ L(d_log_PIB_ts, 1) + L(d_log_PIB_ts, 2) + L(d_log_PIB_ts, 3) + L(d_log_PIB_ts, 4))
+
+# Calcular AIC para $\Delta$log(PIB)
+aic_ar1_pib <- AIC(model_ar1_pib)
+aic_ar2_pib <- AIC(model_ar2_pib)
+aic_ar3_pib <- AIC(model_ar3_pib)
+aic_ar4_pib <- AIC(model_ar4_pib)
+
+# Estimar modelos AR para $\Delta$log(FBCF)
+model_ar1_fbcf <- dynlm(d_log_fbcf_ts ~ L(d_log_fbcf_ts, 1))
+model_ar2_fbcf <- dynlm(d_log_fbcf_ts ~ L(d_log_fbcf_ts, 1) + L(d_log_fbcf_ts, 2))
+model_ar3_fbcf <- dynlm(d_log_fbcf_ts ~ L(d_log_fbcf_ts, 1) + L(d_log_fbcf_ts, 2) + L(d_log_fbcf_ts, 3))
+model_ar4_fbcf <- dynlm(d_log_fbcf_ts ~ L(d_log_fbcf_ts, 1) + L(d_log_fbcf_ts, 2) + L(d_log_fbcf_ts, 3) + L(d_log_fbcf_ts, 4))
+
+# Calcular AIC para $\Delta$log(FBCF)
+aic_ar1_fbcf <- AIC(model_ar1_fbcf)
+aic_ar2_fbcf <- AIC(model_ar2_fbcf)
+aic_ar3_fbcf <- AIC(model_ar3_fbcf)
+aic_ar4_fbcf <- AIC(model_ar4_fbcf)
+
+# Crear data frame con los resultados
+aic_results <- data.frame(
+  Model = c("AR(1)", "AR(2)", "AR(3)", "AR(4)"),
+  AIC_PIB = c(aic_ar1_pib, aic_ar2_pib, aic_ar3_pib, aic_ar4_pib),
+  AIC_fbcf = c(aic_ar1_fbcf, aic_ar2_fbcf, aic_ar3_fbcf, aic_ar4_fbcf)
+)
+
+print(aic_results)
+
+```
+
+-   *Para Difflog(PIB):* el modelo que minimiza el AIC es AR(1).
+
+-   *Para Difflog(FBCF):* el modelo que minimiza el AIC es AR(1).
+
+-   *Difflog(PIB):* El modelo AR(1) tiene el menor AIC (-195.9572),
+    indicando que es el modelo más adecuado para capturar la dinámica de
+    las diferencias logarítmicas del PIB. Esto sugiere que un solo
+    rezago del Difflog(PIB) es suficiente para modelar la serie de
+    tiempo de manera eficiente.
+
+-   *Difflog(FBCF):* El modelo AR(1) también tiene el menor AIC
+    (-70.94062), indicando que es el modelo más adecuado para capturar
+    la dinámica de las diferencias logarítmicas de la FBCF. Similar a
+    Difflog(PIB), un solo rezago del Difflog(FBCF) es suficiente para
+    modelar la serie de tiempo de manera eficiente.
+
+Para ambas series temporales (Difflog(PIB) y Difflog(FBCF)), el modelo
+AR(1) es el que minimiza el AIC, indicando que este es el modelo más
+eficiente para capturar las características de estas series. Este
+resultado sugiere que las diferencias logarítmicas del PIB y de la FBCF
+son bien modeladas considerando solo el primer rezago.
+
+# Pregunta 3
+
+```{r echo=FALSE}
+# Ajustar modelos AR para Difflog(PIB)
+model_ar_pib <- dynlm(d_log_PIB_ts ~ L(d_log_PIB_ts, 1))
+
+# Ajustar modelos AR para Difflog(FBCF)
+model_ar_fbcf <- dynlm(d_log_fbcf_ts ~ L(d_log_fbcf_ts,1))
+
+# Realizar el Test F para Difflog(PIB)
+anova_model_pib <- anova(model_ar_pib)
+anova_model_pib
+
+# Realizar el Test F para Difflog(FBCF)
+anova_model_fbcf <- anova(model_ar_fbcf)
+anova_model_fbcf
+```
+
+Resultados del Test F:
+
+-   Difflog(PIB)
+-   Estadístico F: 3.1121
+-   Valor p: 0.08289
+
+El valor p es 0.08289, que es mayor que 0.05 pero menor que 0.1. Esto
+indica que hay evidencia marginal (al nivel de significancia del 10%)
+para rechazar la hipótesis nula de que el coeficiente del rezago de
+Difflog(PIB) es igual a cero.
+
+En otras palabras, aunque no es significativo al 5%, hay una indicación
+de que el rezago de Difflog(PIB) puede tener un impacto en la serie de
+tiempo, aunque esta evidencia no es fuerte.
+
+La significancia marginal al nivel del 10% sugiere que el rezago de
+Difflog(PIB) podría tener un efecto en la serie, aunque esta evidencia
+no es fuerte.
+
+-   Difflog(FBCF)
+-   Estadístico F: 1.7834
+-   Valor p: 0.1869
+
+El valor p es 0.1869, que es mayor que 0.05 y también mayor que 0.1.
+Esto indica que no hay suficiente evidencia para rechazar la hipótesis
+nula de que el coeficiente del rezago de Difflog(FBCF) es igual a cero.
+En otras palabras, el rezago de Difflog(FBCF) no parece ser
+significativamente diferente de cero, sugiriendo que no tiene un impacto
+considerable en la serie de tiempo.
+
+No hay suficiente evidencia para concluir que el rezago de Difflog(FBCF)
+tiene un efecto significativo en la serie.
+
+En resumen, los resultados indican que el modelo AR(1) para Difflog(PIB)
+podría ser marginalmente significativo, mientras que el modelo AR(1)
+para Difflog(FBCF) no muestra evidencia de significancia. Esto sugiere
+que debemos tener cautela al interpretar la importancia del rezago de
+Difflog(PIB) y que probablemente se necesitan más datos o modelos más
+complejos para capturar la dinámica de Difflog(FBCF).
+
+# Pregunta 4
+
+```{r echo=FALSE}
+# Obtener los coeficientes del modelo
+coef_pib <- coef(model_ar_pib)
+coef_fbcf <- coef(model_ar_fbcf)
+
+# Últimos valores conocidos de Difflog(PIB) y Difflog(FBCF)
+last_d_log_PIB <- tail(d_log_PIB_ts, 1)
+last_d_log_fbcf <- tail(d_log_fbcf_ts, 1)
+
+# Realizar predicciones para 2024, 2025 y 2026 manualmente
+pred_d_log_PIB_2024 <- coef_pib[1] + coef_pib[2] * last_d_log_PIB
+pred_d_log_PIB_2025 <- coef_pib[1] + coef_pib[2] * pred_d_log_PIB_2024
+pred_d_log_PIB_2026 <- coef_pib[1] + coef_pib[2] * pred_d_log_PIB_2025
+
+pred_d_log_fbcf_2024 <- coef_fbcf[1] + coef_fbcf[2] * last_d_log_fbcf
+pred_d_log_fbcf_2025 <- coef_fbcf[1] + coef_fbcf[2] * pred_d_log_fbcf_2024
+pred_d_log_fbcf_2026 <- coef_fbcf[1] + coef_fbcf[2] * pred_d_log_fbcf_2025
+
+# Mostrar los valores predichos
+predicciones <- data.frame(
+  Año = c(2024, 2025, 2026),
+  Predicción_d_log_PIB = c(pred_d_log_PIB_2024, pred_d_log_PIB_2025, pred_d_log_PIB_2026),
+  Predicción_d_log_FBCF = c(pred_d_log_fbcf_2024, pred_d_log_fbcf_2025, pred_d_log_fbcf_2026)
+)
+
+print(predicciones)
+```
+
+*Para Difflog(PIB):*
+En 2024, se espera que el crecimiento logarítmico del PIB sea de
+aproximadamente 2.92%. En 2025, el crecimiento logarítmico del PIB se
+incrementa a aproximadamente 3.53%. En 2026, el crecimiento logarítmico
+del PIB se estabiliza ligeramente en 3.67%. Estas predicciones indican
+un crecimiento continuo en el PIB, con una tendencia positiva a lo largo
+de los tres años, lo cual sugiere una recuperación o expansión económica
+sostenida.
+
+*Para Difflog(FBCF):*
+En 2024, se espera que el crecimiento logarítmico de la FBCF sea de
+aproximadamente 3.54%. En 2025, el crecimiento logarítmico de la FBCF
+aumenta a aproximadamente 4.34%. En 2026, el crecimiento logarítmico de
+la FBCF se estabiliza ligeramente en 4.47%. Estas predicciones indican
+un incremento constante en la FBCF, sugiriendo un aumento en la
+inversión en capital fijo, lo cual es una señal positiva para la
+economía ya que puede conducir a un aumento en la capacidad productiva y
+la eficiencia.
+
+Las predicciones de Difflog(PIB) y Difflog(FBCF) para los años 2024,
+2025 y 2026 muestran una tendencia de crecimiento continuo tanto en el
+PIB como en la FBCF. Esto sugiere que la economía se está expandiendo,
+con aumentos constantes en la producción y la inversión en capital fijo.
+
+# Pregunta 5
+
+```{r echo=FALSE}
+# Últimos valores conocidos de log(PIB) y log(FBCF)
+last_log_PIB <- tail(log_PIB_ts, 1)
+last_log_fbcf <- tail(log_fbcf_ts, 1)
+
+# Calcular log(PIB) para 2024, 2025 y 2026
+log_PIB_2024 <- last_log_PIB + pred_d_log_PIB_2024
+log_PIB_2025 <- log_PIB_2024 + pred_d_log_PIB_2025
+log_PIB_2026 <- log_PIB_2025 + pred_d_log_PIB_2026
+
+# Calcular log(FBCF) para 2024, 2025 y 2026
+log_fbcf_2024 <- last_log_fbcf + pred_d_log_fbcf_2024
+log_fbcf_2025 <- log_fbcf_2024 + pred_d_log_fbcf_2025
+log_fbcf_2026 <- log_fbcf_2025 + pred_d_log_fbcf_2026
+
+# Calcular PIB y FBCF para 2023
+PIB_2023 <- exp(last_log_PIB)
+FBCF_2023 <- exp(last_log_fbcf)
+
+# Mostrar los valores calculados
+resultados <- data.frame(
+  Año = c(2023, 2024, 2025, 2026),
+  log_PIB = c(last_log_PIB, log_PIB_2024, log_PIB_2025, log_PIB_2026),
+  log_FBCF = c(last_log_fbcf, log_fbcf_2024, log_fbcf_2025, log_fbcf_2026),
+  PIB = c(PIB_2023, exp(log_PIB_2024), exp(log_PIB_2025), exp(log_PIB_2026)),
+  FBCF = c(FBCF_2023, exp(log_fbcf_2024), exp(log_fbcf_2025), exp(log_fbcf_2026))
+)
+
+print(resultados)
+```
+
+-   Se observa un crecimiento continuo en el PIB a lo largo de los años,
+    lo que sugiere una expansión económica sostenida.
+
+-   Similar al PIB, la FBCF muestra un crecimiento continuo a lo largo
+    de los años, indicando un aumento en la inversión en capital fijo.
+
+Los valores calculados para el PIB muestran un crecimiento constante
+desde 203750.0 en 2023 hasta 225459.0 en 2026, lo que indica una
+expansión económica continua. Por otra parte, los valores calculados
+para la FBCF también muestran un crecimiento constante desde 48487.74 en
+2023 hasta 54849.93 en 2026, lo que sugiere un aumento continuo en la
+inversión en capital fijo. Estos resultados son consistentes con las
+predicciones realizadas anteriormente y refuerzan la idea de un
+crecimiento económico sostenido en los próximos años.
+
+# Pregunta 6
+
+```{r echo=FALSE}
+# Ajustar las fechas de inicio de las series de tiempo a 2023
+log_PIB_ts <- ts(base$log_PIB, start = c(1960, 1), frequency = 1) # Ajustar la frecuencia si es anual
+log_fbcf_ts <- ts(base$log_fbcf, start = c(1960, 1), frequency = 1) # Ajustar la frecuencia si es anual
+d_log_PIB_ts <- ts(base$d_log_PIB, start = c(1960, 1), frequency = 1) # Ajustar la frecuencia si es anual
+d_log_fbcf_ts <- ts(base$d_log_fbcf, start = c(1960, 1), frequency = 1) # Ajustar la frecuencia si es anual
+
+# Ajustar modelos AR paraDifflog(PIB) utilizando el comando ar
+reg_pib <- ar(d_log_PIB_ts, order.max = 4, aic = TRUE)
+best_order_pib <- reg_pib$order
+reg_final_pib <- ar(d_log_PIB_ts, order.max = best_order_pib)
+
+# Ajustar modelos AR paraDifflog(FBCF) utilizando el comando ar
+reg_fbcf <- ar(d_log_fbcf_ts, order.max = 4, aic = TRUE)
+best_order_fbcf <- reg_fbcf$order
+reg_final_fbcf <- ar(d_log_fbcf_ts, order.max = best_order_fbcf)
+
+# Realizar predicciones y construir intervalos de confianza paraDifflog(PIB)
+forecast_pib <- forecast(reg_final_pib, h = 4, level = 0.95)
+
+# Realizar predicciones y construir intervalos de confianza paraDifflog(FBCF)
+forecast_fbcf <- forecast(reg_final_fbcf, h = 4, level = 0.95)
+
+# Mostrar los resultados de las predicciones y los intervalos de confianza
+list(
+  Predicciones_PIB = forecast_pib,
+  Predicciones_FBCF = forecast_fbcf
+)
+
+
+```
+
+***Resultados de la Pregunta 4***
+
+Predicciones para Difflog(PIB):
+
+-  2024: 0.02923685
+-  2025: 0.03531987
+-  2026: 0.03668774
+
+Predicciones para Difflog(FBCF):
+
+-  2024: 0.03539266
+-  2025: 0.04335954
+-  2026: 0.04472324
+
+***Resultados de la Pregunta 6*** 
+
+Predicciones paraDifflog(PIB) 
+
+-  2023:
+-  Predicción Puntual: 0.02967447
+-  Intervalo de Confianza 95%: [-0.06103433, 0.1208333]
+
+
+-  2024:
+-  Predicción Puntual: 0.03578984
+-  Intervalo de Confianza 95%: [-0.05713649, 0.1287162]
+
+
+-  2025:
+-  Predicción Puntual: 0.03715030
+-  Intervalo de Confianza 95%: [-0.05588441, 0.1301850]
+
+
+-  2026:
+-  Predicción Puntual: 0.03745295
+-  Intervalo de Confianza 95%: [-0.05558711, 0.1304930]
+
+
+Predicciones paraDifflog(FBCF)
+
+
+-  2023:
+-  Predicción Puntual: 0.03594706
+-  Intervalo de Confianza 95%: [-0.2128637, 0.2847579]
+
+
+-  2024:
+-  Predicción Puntual: 0.05684072
+-  Intervalo de Confianza 95%: [-0.1971981, 0.3108976]
+
+
+-  2025:
+-  Predicción Puntual: 0.05053210
+-  Intervalo de Confianza 95%: [-0.2075506, 0.3086148]
+
+
+-  2026:
+-  Predicción Puntual: 0.04452335
+-  Intervalo de Confianza 95%: [-0.2144069, 0.3034536]
+
+
+***Análisis Comparativo*** 
+
+-  Predicciones paraDifflog(PIB):
+
+Las predicciones manuales de la pregunta 4 muestran un crecimiento gradual y ligeramente incremental en Difflog(PIB) a lo largo de los años.
+Las predicciones automatizadas de la pregunta 6 muestran un crecimiento constante de Difflog(PIB) para todos los años, con predicciones más altas y consistentes que las de la pregunta 4.
+Los intervalos de confianza en la pregunta 6 indican una mayor incertidumbre con intervalos más amplios, especialmente con valores negativos, lo que sugiere posibles variaciones significativas.
+
+
+-  Predicciones paraDifflog(FBCF):
+
+Las predicciones manuales de la pregunta 4 muestran un crecimiento significativo enDifflog(FBCF) en 2024, con una leve disminución en la tasa de crecimiento en los años siguientes.
+Las predicciones automatizadas de la pregunta 6 muestran un crecimiento más pronunciado y luego una estabilización en los años siguientes.
+Los intervalos de confianza en la pregunta 6 son significativamente más amplios, reflejando una mayor incertidumbre y la posibilidad de variaciones más significativas, incluidas posibles disminuciones.
+
+
+-  ***Predicciones Puntuales:*** Las predicciones de la pregunta 6 son más uniformes y consistentemente más altas que las predicciones de la pregunta 4, lo que puede deberse a las diferencias en la metodología de predicción y el modelo utilizado.
+-  ***Certeza y Variabilidad:*** Los intervalos de confianza en la pregunta 6 son más amplios y sugieren una mayor incertidumbre, lo que indica que aunque las predicciones puntuales son altas, hay una mayor variabilidad potencial en los valores reales.
+-  ***Modelos Utilizados:*** La diferencia en los resultados destaca la importancia de seleccionar el modelo adecuado y la metodología de predicción en el análisis de series de tiempo. Las predicciones manuales pueden capturar variaciones año a año de manera más precisa, mientras que las predicciones automatizadas ofrecen una visión más general y consistente del crecimiento.
+
+En resumen, los resultados de la pregunta 6 indican un crecimiento económico positivo y consistente con una alta certeza en las predicciones, aunque con intervalos de confianza más amplios que sugieren una mayor variabilidad. Las predicciones manuales de la pregunta 4 muestran una variabilidad más realista año a año y pueden ser útiles para capturar fluctuaciones económicas específicas.
+
+
+

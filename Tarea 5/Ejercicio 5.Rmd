@@ -1,0 +1,303 @@
+---
+title: "**Ejercicio 5**"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fancyhdr}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhead{}
+  - \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+  - \fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+  - \fancypagestyle{plain}{
+      \fancyhead{}
+      \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+      \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+fontsize: 12pt
+geometry: margin=1in 
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\maketitle
+\vspace{-5em}
+\vspace{0.5em}
+```
+```{=tex}
+\begin{center}
+\footnotesize \textbf{Curso}: Econometría II \\
+\footnotesize \textbf{Profesor}: Mauricio Tejada \\
+\footnotesize \textbf{Estudiantes}: Dania Bustamante, Rosana Cardona, José Casanova \\
+\footnotesize 26 junio 2024 \\
+\end{center}
+```
+
+```{r setup, include=FALSE}
+library(tidyverse);library(lmtest);library(stargazer);library(readxl)
+options(scipen=999);library(nlme); library(dplyr);library(sandwich);library(car);library(kableExtra);library(psych)
+library(readxl)
+library(plm)
+library(ggplot2)
+library(sandwich)
+library(dynlm)
+
+datos <- read_excel("datos_ejercicio_empirico_5_2024.xlsx")
+colnames(datos) <- c("Periodo", "WPU0561","INDPRO", "Ot")
+INDPRO <- ts(datos$INDPRO, start = c(1955, 1), frequency = 12)
+```
+
+## ***Pregunta 1***
+
+Calcule la tasa de crecimiento mensual de la variable INDPRO, expresada  
+en términos porcentuales ¿Cuáles son la media y la desviación típica de la variable gt durante el periodo muestral?
+
+```{r echo=TRUE}
+g_t <- 100 * diff(log(INDPRO))
+
+media_g_t <- mean(g_t, na.rm = TRUE)
+desviacion_g_t <- sd(g_t, na.rm = TRUE)
+
+media_g_t
+desviacion_g_t
+```
+
+La media de la tasa de crecimiento mensual es de 0.2350164.
+
+La desviación tipica de la tasa de crecimiento mensual es de 0.8828447.
+
+## ***Pregunta 2***
+
+Represente gráficamente el valor de la variable Ot. ¿Por qué existen
+tantos valores de Ot iguales a cero? ¿Por qué no existen valores de Ot
+que sean negativos?
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+Ot <- ts(datos$Ot, start = c(1955, 1), end = c(2013, 12), frequency = 12)
+df_Ot <- data.frame(time = time(Ot), Ot = as.numeric(Ot))
+ggplot(df_Ot, aes(x = time, y = Ot)) +
+  geom_line(color = "blue", size = 0.5, linetype = "solid") +  # Cambia el color, tamaño y tipo de línea
+  labs(title = "Evolución de Ot a lo largo del tiempo", x = "Tiempo", y = "Ot") +  # Cambia los títulos y etiquetas
+  theme_minimal() +  # Cambia el tema del gráfico
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),  # Centra y cambia el tamaño y estilo del título
+    axis.title.x = element_text(size = 12, face = "italic"),  # Cambia el tamaño y estilo de la etiqueta del eje x
+    axis.title.y = element_text(size = 12, face = "italic"),  # Cambia el tamaño y estilo de la etiqueta del eje y
+    panel.grid.major = element_line(color = "gray", linetype = "dashed"),  # Cambia el estilo de las líneas de la cuadrícula
+    panel.grid.minor = element_blank()  # Elimina las líneas de cuadrícula menores
+  )
+
+```
+
+-   $O_t$ es igual a cero cuando el precio del petróleo en el periodo t
+    no supera al máximo precio del año anterior. Esto sucede porque los
+    precios del petróleo tienden a fluctuar y no siempre alcanzan un
+    nuevo máximo cada mes.
+
+-   La ausencia de valores negativos de $O_t$ es la diferencia positiva
+    entre el precio actual del petróleo y el máximo precio del año
+    anterior. Si el precio del petróleo no supera al máximo del año
+    anterior, es cero. Por lo tanto, no puede ser negativo.
+    
+## ***Pregunta 3***
+
+Estime un modelo de Rezagos distribuidos para la variable gt sobre el
+valor actual y los 18 valores retardados de la variable Ot. Estime los
+errores estádnar HAC.
+
+```{r echo=FALSE}
+# Alinear las series de tiempo para que tengan la misma longitud
+aligned_data <- ts.intersect(g_t, Ot)
+
+# Crear la fórmula del modelo con 18 Rezagos de Ot
+lags <- 0:18
+lagged_terms <- paste0("L(Ot, ", lags, ")", collapse = " + ")
+formula <- as.formula(paste("g_t ~ ", lagged_terms))
+
+# Estimar el modelo
+model <- dynlm(formula, data = aligned_data)
+
+# Calcular los errores estándar HAC
+hac_errors <- coeftest(model, vcov = NeweyWest(model))
+```
+
+### ***Resumen del modelo***
+```{r echo=FALSE}
+summary(model)
+```
+
+### ***Errores Estandar HAC***
+```{r echo=FALSE}
+print(hac_errors)
+```
+
+## ***Pregunta 4***
+
+Considerados de forma conjunta, ¿son los coeficientes de Ot estadística
+y significativamente distintos de cero?
+
+$$H_o: Todos\ los\ rezagos\ son\ cero $$
+$$H_1: Al\ menos\ uno\ es\ diferente\ cero $$
+
+```{r echo=FALSE}
+# Cargar librería necesaria
+library(car)
+
+# Crear los nombres de las restricciones
+restricciones <- paste0("L(Ot, ", 0:18, ") = 0")
+
+# Realizar la prueba F conjunta
+prueba_f <- linearHypothesis(model, restricciones)
+
+# Mostrar los resultados de la prueba F
+print(prueba_f)
+```
+
+Si el valor p es menor que el nivel de significancia $\alpha=0,5$,
+rechazamos la hipótesis nula de que todos los coeficientes de los
+rezagos son cero. Esto nos dice que al menos uno de los coeficientes es
+estadísticamente significativo.
+
+***Resultados***
+
+Modelo restringido (sin Rezagos):
+
+-   gl: 653
+-   SRC: 436.48
+
+Modelo completo (con Rezagos):
+
+-   gl: 634
+-   SRC: 383.56
+
+Diferencia en sumas de cuadrados: 52.918
+
+Estadístico F: 4.6036
+
+Valor p: 0.0000000005574 (menor que 0.05)
+
+-   Dado que el valor p es menor al nivel de significancia, rechazamos
+    la hipótesis nula de que todos los coeficientes de los rezagos son
+    cero. Esto nos dice que los rezagos tienen un efecto
+    estadísticamente significativo sobre la variable dependiente en
+    conjunto, sugiriendo que tienen un impacto en la variable de
+    interés.
+    
+    
+## ***Pregunta 5***
+
+Realice unos gráficos como los vistos en clase representando los multiplicadores dinámicos estimados, los multiplicadores acumulativos, y los intervalos de confianza al 95%. Comente su opinión acerca del tamaño
+de los multiplicadores en la realidad.
+```{r include=FALSE}
+# Obtener los coeficientes del modelo
+coeficientes <- coef(model)[2:20] # Excluir el intercepto
+
+# Calcular los intervalos de confianza al 95%
+se <- sqrt(diag(vcovHC(model, type = "HC1")))[2:20] # Excluir el intercepto
+ci_lower <- coeficientes - 1.96 * se
+ci_upper <- coeficientes + 1.96 * se
+
+# Calcular los multiplicadores acumulativos
+multiplicadores_acumulativos <- cumsum(coeficientes)
+ci_lower_acumulativos <- cumsum(ci_lower)
+ci_upper_acumulativos <- cumsum(ci_upper)
+
+# Crear data frames para graficar
+df_dinamicos <- data.frame(lag = 0:18, coeficientes, ci_lower, ci_upper)
+df_acumulativos <- data.frame(lag = 0:18, multiplicadores_acumulativos, ci_lower_acumulativos, ci_upper_acumulativos)
+
+```
+
+```{r echo=FALSE}
+library(ggplot2)
+
+ggplot(df_dinamicos, aes(x = lag, y = coeficientes)) +
+  geom_line(color = "blue", size = 1.2) +  # Cambiar color y tamaño de la línea
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper), fill = "lightblue", alpha = 0.3) +  # Cambiar color y transparencia del área sombreada
+  labs(title = "Multiplicadores Dinámicos", x = "Rezagos", y = "Multiplicador") +  # Títulos y etiquetas
+  theme_minimal() +  # Tema minimalista
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),  # Estilo del título
+    axis.title.x = element_text(size = 12, face = "italic"),  # Estilo de la etiqueta del eje x
+    axis.title.y = element_text(size = 12, face = "italic"),  # Estilo de la etiqueta del eje y
+    panel.grid.major = element_line(color = "gray", linetype = "dashed"),  # Estilo de la cuadrícula
+    panel.grid.minor = element_blank()  # Quitar cuadrícula menor
+  )
+
+```
+
+Los multiplicadores dinámicos muestran que los efectos directos de $Ot$
+sobre $gt$ son variables y en su mayoría no significativos. Esto podría
+indicar que los cambios en los precios del petróleo no tienen un impacto
+fuerte y consistente en la producción industrial en cada periodo
+individual.
+
+```{r echo=FALSE}
+ggplot(df_acumulativos, aes(x = lag, y = multiplicadores_acumulativos)) +
+  geom_line(color = "darkgreen", size = 1.2) +  # Cambiar color y tamaño de la línea
+  geom_ribbon(aes(ymin = ci_lower_acumulativos, ymax = ci_upper_acumulativos), fill = "lightgreen", alpha = 0.3) +  # Cambiar color y transparencia del área sombreada
+  labs(title = "Multiplicadores Acumulativos", x = "Rezagos", y = "Multiplicador Acumulativo") +  # Títulos y etiquetas
+  theme_minimal() +  # Tema minimalista
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),  # Estilo del título
+    axis.title.x = element_text(size = 12, face = "italic"),  # Estilo de la etiqueta del eje x
+    axis.title.y = element_text(size = 12, face = "italic"),  # Estilo de la etiqueta del eje y
+    panel.grid.major = element_line(color = "gray", linetype = "dashed"),  # Estilo de la cuadrícula
+    panel.grid.minor = element_blank()  # Quitar cuadrícula menor
+  )
+
+```
+
+Los multiplicadores acumulativos muestran un impacto negativo
+acumulativo a lo largo del tiempo, aunque con alta incertidumbre. Esto
+podría interpretarse como que, aunque los efectos individuales no son
+significativos, hay una tendencia general de que los aumentos en los
+precios del petróleo tienden a reducir la producción en el largo plazo.
+Sin embargo, la alta incertidumbre que muestra los intervalos de
+confianza amplios indica que estas conclusiones pueden ser erroneas.
+
+
+***Resumiendo:***
+
+1.  La mayoría de los efectos dinámicos no son estadísticamente
+    significativos, y existe una alta incertidumbre en los efectos
+    acumulativos.
+
+2.  A pesar de la falta de significancia estadística en muchos puntos,
+    se encuentra que existe un posible impacto acumulativo negativo de
+    los aumentos en los precios del petróleo sobre la producción.
+
+3.  Debido a la alta incertidumbre, la conclusión sobre el impacto de
+    los precios del petróleo debe tomarse con cuidado y tomar en cuenta
+    con otros factores económicos.
+\newpage
+
+## ***Pregunta 6*** 
+
+Supóngase que la elevada demanda de Estados Unidos (evidenciada por los elevados valores de la variable gt) conduce a un aumento en los precios del petróleo. ¿Es exógena la variable Ot? Resultan confiables los multiplicadores estimados que se muestran en los gráficos anteriores? Explíquelo.
+
+***Exogeneidad de*** $Ot$***:***
+
+-   Si se considera que la elevada demanda de Estados Unidos genera un
+    aumento en los precios del petróleo, esto indica que la varible $Ot$
+    no es exógena, lo cual viola el supuesto de exogeneidad.
+
+-   Si $Ot$ no es exogena esto implica que los errores del modelo pueden
+    estar correlacionados , generando un sesgo en las estimaciones de
+    los coeficientes.
+
+-   Los multiplicadores asumen que $Ot$ es exógena. Si no es exógena,
+    los multiplicadores no reflejan de manera correcta el efecto causal
+    entre $Ot$ y $gt$ .
+
+-   La presencia de endogeneidad genera sesgo en las estimaciones,
+    afectando la confiabilidad de los multiplicadores de los gráficos
+    anteriores.
+
+-   Los intervalos de confianza también pueden ser incorrectos si $Ot$
+    no es exógena, ya que no muestran de manera adecuada la
+    incertidumbre en las estimaciones.

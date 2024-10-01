@@ -1,0 +1,168 @@
+En el modelo de efectos aleatorios,
+los coeficientes de las variables asociadas a la justicia penal y otras
+variables explicativas son similares en magnitud y significancia
+estadística a los del modelo de efectos fijos. Esto sugiere que, en este
+caso, la inclusión de efectos aleatorios no cambia significativamente
+las conclusiones sobre la relación entre las variables explicativas y la
+variable dependiente. Sin embargo, en el modelo de efectos aleatorios,
+se estiman las varianzas de los efectos individuales e idiosincráticos,
+lo que proporciona información adicional sobre la estructura de los
+datos. 
+
+En este caso, la varianza de los efectos individuales (0.08277
+0.08277) es sustancialmente mayor que la varianza de los efectos
+idiosincráticos (0.01979 0.01979), lo que sugiere que hay variabilidad
+significativa entre los condados que no puede explicarse por las
+variables incluidas en el modelo. 
+
+En conclusión, aunque los coeficientes de las variables asociadas a la justicia penal son consistentes en
+magnitud y significancia estadística entre los modelos de efectos fijos
+y efectos aleatorios, la inclusión de efectos aleatorios proporciona
+información adicional sobre la variabilidad entre los condados que puede
+ser útil para el análisis de los datos.
+
+Al comparar el modelo de efectos fijos con el modelo de efectos
+aleatorios, podemos notar algunas diferencias notables en los
+coeficientes y en sus interpretaciones:
+
+Coeficientes de las variables de interés (prbarr, prbconv, prbpris):
+
+En el modelo de efectos aleatorios, los coeficientes para las variables
+de probabilidad de arresto (prbarr) y probabilidad de condena (prbconv)
+muestran magnitudes similares a las obtenidas en el modelo de efectos
+fijos. Sin embargo, el coeficiente para la variable de probabilidad de
+sentencia de prisión (prbpris) parece ser ligeramente menor en magnitud
+en el modelo de efectos aleatorios. 
+
+El modelo de efectos aleatorios proporciona estimaciones de la varianza
+de los efectos individuales (idiosincráticos e individuales), lo que
+puede ser útil para comprender la heterogeneidad entre las unidades
+individuales. En este caso, la varianza de los efectos individuales
+parece ser mayor que la varianza idiosincrática, lo que sugiere que hay
+diferencias sistemáticas entre las unidades individuales que no están
+completamente capturadas por las variables observadas en el modelo. En
+resumen, aunque los coeficientes de las variables de interés son
+relativamente similares entre los modelos de efectos fijos y efectos
+aleatorios, el modelo de efectos aleatorios proporciona una perspectiva
+adicional al estimar la varianza de los efectos individuales. Esto puede
+ser útil para comprender mejor la variabilidad entre las unidades
+individuales y para tomar decisiones sobre la especificación del modelo.
+
+
+------------------------------------------------------------------------------------
+
+El resultado del test de Hausman te dirá si debes rechazar o no la 
+hipótesis nula. Si el valor-p es menor que un nivel de significancia
+elegido (por ejemplo, 0.05), entonces rechazarías la hipótesis nula y
+preferirías el modelo que está en línea con la hipótesis alternativa. En
+otras palabras, si el valor-p es significativo, eso sugeriría que el
+modelo de efectos fijos es más apropiado. Por el contrario, si el
+valor-p no es significativo, eso sugeriría que el modelo de efectos
+aleatorios es preferible.
+
+Por lo tanto, el mejor estimador será el que corresponda al modelo que
+tenga un valor-p significativo en el test de Hausman, lo que indicaría
+que es el modelo más apropiado para los datos.
+
+El resultado del test de Hausman indica que el valor-p es extremadamente
+pequeño (p-valor \< 0.00000000000000022), lo que significa que
+rechazaríamos la hipótesis nula de que uno de los modelos es
+inconsistente en favor de la hipótesis alternativa. Esto sugiere que al
+menos uno de los modelos (efectos fijos o efectos aleatorios) es
+inconsistente.
+
+Cuando el test de Hausman sugiere que uno de los modelos es
+inconsistente, generalmente se prefiere el otro modelo que se considera
+consistente. En este caso, dado que la hipótesis nula es rechazada,
+implicando que uno de los modelos es inconsistente, se preferiría el
+modelo que no fue rechazado por el test de Hausman.
+
+Por lo tanto, en este caso, el modelo preferido sería el que no fue
+rechazado por el test de Hausman. Si el modelo de efectos aleatorios no
+fue rechazado, entonces sería preferible utilizar el modelo de efectos
+aleatorios. Si el modelo de efectos fijos no fue rechazado, entonces
+sería preferible utilizar el modelo de efectos fijos.
+
+El test de Hausman se utiliza para determinar si el modelo de efectos
+aleatorios es consistente con el modelo de efectos fijos. La hipótesis
+nula en el test de Hausman es que ambos modelos son consistentes y que
+la diferencia entre los estimadores de efectos fijos y aleatorios es
+puramente aleatoria. La hipótesis alternativa es que al menos uno de los
+modelos es inconsistente.
+
+En este caso, el valor p del test de Hausman es extremadamente pequeño,
+lo que sugiere que rechazamos la hipótesis nula. Por lo tanto,
+concluimos que al menos uno de los modelos es inconsistente. Dado que el
+modelo de efectos aleatorios permite que los efectos individuales sean
+correlacionados con las variables explicativas, mientras que el modelo
+de efectos fijos no, podemos inferir que el modelo de efectos fijos es
+el mejor estimador en este contexto. Esto sugiere que hay efectos no
+observados que están correlacionados con las variables explicativas, lo
+que respalda la elección del modelo de efectos fijos para este análisis.
+
+Hipótesis Nula (H0):
+
+𝐻 0 H 0 ​ : Los coeficientes estimados utilizando el modelo de efectos
+fijos son consistentes con los coeficientes estimados utilizando el
+modelo de efectos aleatorios. Hipótesis Alternativa (H1):
+
+𝐻 1 H 1 ​ : Al menos uno de los modelos (efectos fijos o efectos
+aleatorios) es inconsistente. Estadístico del Test:
+
+El test de Hausman compara la diferencia entre los estimadores de
+efectos fijos y efectos aleatorios. Este estadístico se calcula como la
+diferencia entre los coeficientes estimados de ambos modelos, ponderada
+por la varianza-covarianza de esta diferencia. Estad ı ˊ stico de
+Hausman = ( 𝛽 \^ 𝐹 𝐸 − 𝛽 \^ 𝑅 𝐸 ) ′ [ 𝑉 𝑎 𝑟 ( 𝛽 \^ 𝐹 𝐸 ) − 𝑉 𝑎 𝑟 ( 𝛽 \^
+𝑅 𝐸 )] − 1 ( 𝛽 \^ 𝐹 𝐸 − 𝛽 \^ 𝑅 𝐸 ) Estad ı ˊ stico de Hausman=( β \^ ​
+
+FE ​ − β \^ ​
+
+RE ​ ) ′ [Var( β \^ ​
+
+FE ​ )−Var( β \^ ​
+
+RE ​ )] −1 ( β \^ ​
+
+FE ​ − β \^ ​
+
+RE ​ ) Donde: 𝛽 \^ 𝐹 𝐸 β \^ ​
+
+FE ​ es el vector de coeficientes estimados del modelo de efectos fijos.
+𝛽 \^ 𝑅 𝐸 β \^ ​
+
+RE ​ es el vector de coeficientes estimados del modelo de efectos
+aleatorios. 𝑉 𝑎 𝑟 ( 𝛽 \^ 𝐹 𝐸 ) Var( β \^ ​
+
+FE ​ ) es la matriz de varianza-covarianza de los coeficientes estimados
+del modelo de efectos fijos. 𝑉 𝑎 𝑟 ( 𝛽 \^ 𝑅 𝐸 ) Var( β \^ ​
+
+RE ​ ) es la matriz de varianza-covarianza de los coeficientes estimados
+del modelo de efectos aleatorios. Distribución del Estadístico:
+
+En grandes muestras, el estadístico del test sigue aproximadamente una
+distribución chi-cuadrado con el número de coeficientes estimados menos
+el número de coeficientes fijos (es decir, el número de coeficientes que
+varían en el modelo de efectos aleatorios). Decisión:
+
+Si el valor p asociado con el estadístico de Hausman es menor que un
+nivel de significancia predeterminado (por ejemplo, 0.05), rechazamos la
+hipótesis nula y concluimos que al menos uno de los modelos es
+inconsistente.
+
+
+
+\
+$log(crmrte_{it}) = \beta_0 + \beta_1\log(prbarr_{it}) + \beta_2\log(prbconv_{it}) + \beta_3\log(prbpris_{it})+ \beta_4\log(avgsen_{it}) + \beta_5\log(polpc_{it}) + \beta_6\log(wcon_{it}) + \beta_7\log(wtuc_{it}) + \beta_8\log(wtrd_{it}) + \beta_9\log(wfir_{it}) + \beta_{10}\log(wser_{it}) + \beta_{11}\log(wmfg_{it}) + \beta_{12}\log(wfed_{it}) + \beta_{13}\log(wsta_{it}) + \beta_{14}\log(wloc_{it}) + a_i + \epsilon_{it}$\
+
+$log(crmrte_{it}) = \beta_0 + \beta_1\log(prbarr_{it}) + \beta_2\log(prbconv_{it}) + \beta_3\log(prbpris_{it})+ \beta_4\log(avgsen_{it}) + \beta_5\log(polpc_{it}) + \beta_6\log(wcon_{it}) + \beta_7\log(wtuc_{it}) + \beta_8\log(wtrd_{it}) + \beta_9\log(wfir_{it}) + \beta_{10}\log(wser_{it}) + \beta_{11}\log(wmfg_{it}) + \beta_{12}\log(wfed_{it}) + \beta_{13}\log(wsta_{it}) + \beta_{14}\log(wloc_{it}) + a_i + \epsilon_{it}$
+
+$ \Delta \log(crmrte_{it}) = \beta_1 \Delta \log(prbarr_{it}) + \beta_2 \Delta \log(prbconv_{it}) + \beta_3 \Delta \log(prbpris_{it}) + \beta_4\Delta \log(avgsen_{it}) + \beta_5\Delta \log(polpc_{it}) + \beta_6\Delta \log(wcon_{it}) + \beta_7\Delta \log(wtuc_{it}) + \beta_8\Delta \log(wtrd_{it}) + \beta_9\Delta \log(wfir_{it}) + \beta_{10}\Delta \log(wser_{it}) + \beta_{11}\Delta \log(wmfg_{it}) + \beta_{12}\Delta \log(wfed_{it}) + \beta_{13}\Delta \log(wsta_{it}) + \beta_{14}\Delta \log(wloc_{it}) + \Delta \epsilon_{it} $$
+
+
+
+$\stackrel{..}{\log(crmrte)_{it}} = \stackrel{..}{\beta_0} + \stackrel{..}{\beta_1}\stackrel{..}{\log(prbarr)_{it}} + \stackrel{..}{\beta_2}\stackrel{..}{\log(prbconv)_{it}} + \stackrel{..}{\beta_3}\stackrel{..}{\log(prbpris)_{it}} + \stackrel{..}{\beta_4}\stackrel{..}{\log(avgsen)_{it}} + \stackrel{..}{\beta_5}\stackrel{..}{\log(polpc)_{it}} + \stackrel{..}{\beta_6}\stackrel{..}{\log(wcon)_{it}} + \stackrel{..}{\beta_7}\stackrel{..}{\log(wtuc)_{it}} + \stackrel{..}{\beta_8}\stackrel{..}{\log(wtrd)_{it}} + \stackrel{..}{\beta_9}\stackrel{..}{\log(wfir)_{it}} + \stackrel{..}{\beta_{10}}\stackrel{..}{\log(wser)_{it}} + \stackrel{..}{\beta_{11}}\stackrel{..}{\log(wmfg)_{it}} + \stackrel{..}{\beta_{12}}\stackrel{..}{\log(wfed)_{it}} + \stackrel{..}{\beta_{13}}\stackrel{..}{\log(wsta)_{it}} + \stackrel{..}{\beta_{14}}\stackrel{..}{\log(wloc)_{it}} + \stackrel{..}{a_i} + \stackrel{..}{\epsilon_{it}}$
+
+
+
+$\overset{\sim}{\log(\text{crmrte})_{it}} = \overset{\sim}{\beta_0} + \overset{\sim}{\beta_1} \overset{\sim}{\log(\text{prbarr})_{it}} + \overset{\sim}{\beta_2} \overset{\sim}{\log(\text{prbconv})_{it}} + \overset{\sim}{\beta_3} \overset{\sim}{\log(\text{prbpris})_{it}} + \overset{\sim}{\beta_4} \log(\text{avgsen})_{it} + \overset{\sim}{\beta_5} \log(\text{polpc})_{it} + \overset{\sim}{\beta_6} \log(\text{wcon})_{it} + \overset{\sim}{\beta_7} \log(\text{wtuc})_{it} + \overset{\sim}{\beta_8} \log(\text{wtrd})_{it} + \overset{\sim}{\beta_9} \log(\text{wfir})_{it} + \overset{\sim}{\beta_{10}} \log(\text{wser})_{it} + \overset{\sim}{\beta_{11}} \log(\text{wmfg})_{it} + \overset{\sim}{\beta_{12}} \log(\text{wfed})_{it} + \overset{\sim}{\beta_{13}} \log(\text{wsta})_{it} + \overset{\sim}{\beta_{14}} \log(\text{wloc})_{it} + \overset{\sim}{a_i} + \overset{\sim}{\epsilon}_{it}$

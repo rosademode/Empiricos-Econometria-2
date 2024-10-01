@@ -1,0 +1,223 @@
+---
+title: "**Ejercicio 3**"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fancyhdr}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhead{}
+  - \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+  - \fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+  - \fancypagestyle{plain}{
+      \fancyhead{}
+      \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+      \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+fontsize: 12pt
+geometry: margin=1in 
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\maketitle
+\vspace{-5em}
+\vspace{0.5em}
+```
+```{=tex}
+\begin{center}
+\footnotesize \textbf{Curso}: Econometría II \\
+\footnotesize \textbf{Profesor}: Mauricio Tejada \\
+\footnotesize \textbf{Estudiantes}: Dania Bustamante, Rosana Cardona, José Casanova \\
+\footnotesize 15 mayo 2024 \\
+\end{center}
+```
+```{r setup, include=FALSE}
+library(tidyverse);library(lmtest);library(stargazer);library(readxl)
+options(scipen=999);library(nlme); library(dplyr);library(sandwich);library(car);library(kableExtra);library(psych)
+library(readxl)
+library(plm)
+#install.packages("plm")
+#install.packages("collapse")
+
+crime4 <- read_excel("crime4.xlsx")
+panel <- pdata.frame(crime4, index = c("county", "year"))
+```
+
+Cornwell y Trumbull (1994) utilizaron datos de 90 condados en Carolina del Norte, de los años 1981 a 1987, para estimar un modelo de efectos inobservables de la delincuencia. Diversos factores, entre los que se cuentan la ubicación geográfica, las actitudes hacia la delincuencia, los registros históricos y las normas de denuncia del crimen, podrían estar contenidos en el efecto no observable $a_i$. El modelo propuesto para explicar el efecto disuasivo de la justicia penal sobre la tasa de
+criminalidad es el siguiente:
+
+donde i es el condado y t es el año.
+
+Las variables de salario se incluyen en el modelo para controlar por la
+situación económica y por la importancia de los sectores económicos a
+nivel de condado. El número de policías (por habitante) se incluye para
+controlar por el efecto del control policial.
+
+## ***Pregunta 1***
+
+Estime el modelo por el método de mínimos cuadrados agrupados (pooled
+MCO). Estamos interesados en las tres variables de probabilidad
+(arresto, condena y tiempo cumplido en prisión) que son las variables
+asociadas a la justicia penal. ¿Por qué es probable que los estimadores
+obtenidos sean sesgados?
+
+```{r comment="", echo=FALSE}
+pooled <- plm(log(crmrte) ~ log(prbarr) + log(prbconv) + log(prbpris) + log(avgsen) + log(polpc) + log(wcon) + log(wtuc) + log(wtrd) + log(wfir) + log(wser) + log(wmfg) + log(wfed) + log(wsta) + log(wloc), data = panel, model = "pooling")
+
+summary(pooled)
+```
+
+-   $\hat{\beta}_1\log(prbarr)$: Un aumento de 1% en la probabilidad de
+    arresto en disminuye en promedio 0.677% la tasa de criminalidad,
+    manteniendo todo lo demás constante.
+
+-   $\hat{\beta}_2\log(prbconv)$: Un aumento de 1% en la probabilidad de
+    condena disminuye en promedio un 0.513% la tasa de criminalidad,
+    manteniendo todo lo demás constante.
+
+-   $\hat{\beta}_3\log(prbconv)$: Un aumento de 1% en la probabilidad de
+    sentencia de prisión aumenta en promedio 0.124% la tasa de
+    criminalidad, manteniendo todo lo demás constante.
+
+Los estimadores obtenidos a través del minimos cuadrados agrupados
+podrían tener sesgo debido a varios factores:
+
+-   ***Endogeneidad:*** Las variables de la probabilidad de arresto,
+    condena y tiempo cumplido en prisión pueden tener correlación con el
+    término de error. Los condados con altas tasas de criminalidad
+    pueden tener más recursos u opciones para la aplicación de la ley,
+    lo que aumentaría la probabilidad de ser arrestado o tener algún
+    tipo de condena. Lo anterior podría generar una correlación positiva
+    entre la probabilidad de arresto y el término de error, generando un
+    sesgo en el estimador para la probabilidad de arresto.
+
+-   ***Efectos fijos no observados:*** El modelo tiene un término de
+    caracteristicas o cualidades no observadas ($a_i$), que puede
+    capturar elementos inobservables y constantes en el tiempo de cada
+    lugar. Si estas cualidades tienen correlación con las variables de
+    probabilidad usadas, los estimadores estarán sesgados. Por ejemplo,
+    si los condados con leyes más estrictas hacia el crimen tienen una
+    mayor probabilidad de ser arrestado, el parametro de $log(prbarr)$ y
+    el término $a_i$ estarán correlacionados.
+
+-   ***Variables omitidas:*** Si existen variables relevantes que no se
+    incluyen en el modelo, esto genera sesgo en los estimadores. Por
+    ejemplo, si la tasa de desempleo afecta potencialmente a la tasa de
+    criminalidad, pero no se incluye en el modelo, esto puede sesgar los
+    estimadores de las variables incluidas en el modelo.
+
+
+## ***Pregunta 2:*** 
+
+Estime ahora el modelo usando el método de primeras diferencias. ¿Existe un cambio notable (respecto a lo hallado en 1) en el signo o en la magnitud de los coeficientes de las variables asociadas a la justicia penal? ¿Tiene un efecto disuasivo la justicia penal? ¿Son los efectos estadísticamente significativos individualmente? Interprete los resultados.
+
+```{r comment="", echo=FALSE}
+firstdiff <- plm(log(crmrte) ~ log(prbarr) + log(prbconv) + log(prbpris)  + log(avgsen) + log(polpc) + log(wcon) + log(wtuc) + log(wtrd) + log(wfir) + log(wser) + log(wmfg) + log(wfed) + log(wsta) + log(wloc), data = panel, model = "fd")
+summary(firstdiff)
+```
+
+-   $\hat{\beta}_1log(prbarr)$: Un aumento del 1% en la probabilidad de arresto disminuye, en promedio, un 0.345% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+-   $\hat{\beta}_2log(prbconv)$: Un aumento del 1% en la probabilidad de condena disminuye, en promedio, un 0.252% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+-   $\hat{\beta}_3log(prbpris)$: Un aumento del 1% en la probabilidad de sentencia de prisión disminuye, en promedio, 0.177% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+
+Comparando los resultados entre el modelo de mínimos cuadrados agrupados y el modelo de primeras diferencias, podemos observar algunos cambios en los coeficientes de las variables asociadas a la justicia penal y en su significancia estadística. 
+
+-  $log(prbarr)$: En el modelo de pooling, tiene un coeficiente negativo *(-0.677)* y significativo a un nivel de confianza muy alto con un valor p cercano a cero, lo que sugiere que un aumento en la probabilidad de arresto se relaciona con una disminución en la tasa de criminalidad. Sin embargo, en el modelo de primeras diferencias, el signo es también negativo  *(-0.345)*, pero con una magnitud menor y sigue siendo significativo a un nivel muy alto con un valor p cercano a cero. Esto indica que el efecto disuasivo del arresto sobre la tasa de criminalidad se mantiene, pero quizás no es tan fuerte como en el modelo de pooling. La variable de "probabilidad de arresto" (log(prbarr)) tiene un coeficiente negativo significativo en ambos modelos. Esto sugiere que un aumento en la probabilidad de arresto está asociado con una disminución en la tasa de criminalidad. 
+
+-  $log(prbconv)$: Tanto en el modelo de pooling *(-0.513)* como en el de primeras diferencias *(-0.252)*, el estimador tiene un coeficiente negativo y significativo, lo que sugiere que un aumento en la probabilidad de condena se asocia con una disminución en la tasa de criminalidad para ambos modelos. Sin embargo, el coeficiente en el modelo de primeras diferencias es menor en magnitud que en el modelo de pooling. En ambos modelos, estos parametros indican que un aumento en la probabilidad de condena está asociado con una disminución en la tasa de criminalidad. 
+
+-  $log(prbpris)$: En el modelo de pooling, la variable tiene un coeficiente positivo *(0.124)* y significativo a un 1%, lo que indica que un aumento en la probabilidad de sentencia de prisión podría estar relacionado con un aumento en la tasa de criminalidad. En el modelo de primeras diferencias, el coeficiente es negativo *(-0.177)* y significativo con un valor p menor al nivel de significancia. Esto sugiere que un aumento en la probabilidad de sentencia de prisión está asociado con una disminución en la tasa de criminalidad.
+
+En resumen, aunque los coeficientes de las variables asociadas a la justicia penal tienen algunas diferencias en la magnitud y la significancia estadistica, muestran un efecto disuasivo sobre la tasa de criminalidad en ambos modelos. Estas diferencias podrían generarse debido a la forma en que se controlan los efectos individuales en cada modelo.
+
+## ***Pregunta 3:*** 
+
+Vuelva a estimar el modelo pero ahora use efectos fijos en vez de diferenciación. ¿Existe un cambio notable (respecto a lo hallado en 2) en el signo o en la magnitud de los coeficientes de las variables asociadas a la justicia penal? ¿Qué sucede con la significancia estadística? Explique porqué existirían (o no) dichas diferencias.
+
+
+```{r comment="", echo=FALSE}
+fijos <- plm(log(crmrte) ~ log(prbarr) + log(prbconv) + log(prbpris)  + log(avgsen) + log(polpc) + log(wcon) + log(wtuc) + log(wtrd) + log(wfir) + log(wser) + log(wmfg) + log(wfed) + log(wsta) + log(wloc), data = panel, model = "within")
+summary(fijos)
+```
+
+-   $\hat{\beta}_1\stackrel{..}{\log(prbarr)}$: Un aumento del 1% en la probabilidad de arresto disminuye, en promedio, un 0.386% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+-   $\hat{\beta}_2\stackrel{..}{\log(prbconv)}$: Un aumento del 1% en la probabilidad de condena disminuye, en promedio, un 0.304% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+-   $\hat{\beta}_3\stackrel{..}{\log(prbpris)}$: Un aumento del 1% en la probabilidad de sentencia de prisión disminuye, en promedio, 0.192% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+
+Al realizar la comparación de los resultados entre el modelo de primeras diferencias y el modelo de efectos fijos, se observan algunos cambios en los coeficientes de las variables de probabilidad asociadas a la justicia penal y en su significancia estadística. 
+
+-  $log(prbarr)$: En el modelo de primeras diferencias, tiene un coeficiente negativo *(-0.345)* y significativo con un p valor muy cercano a cero, indicando un efecto disuasivo de la probabilidad de arresto sobre la tasa de criminalidad. Por otra parte, en el modelo de efectos fijos el coeficiente es también negativo y significativo *(-0.386)*, pero la magnitud es ligeramente menor que en el modelo de primeras diferencias. 
+
+-  $log(prbconv)$: En ambos modelos, tiene un coeficiente negativo y significativo. Para modelo de diferencias *(-0.252)*, indicando un efecto disuasivo de la condena sobre la tasa de criminalidad. Sin embargo, la magnitud del coeficiente es menor en el modelo de efectos fijos *(-0.304)*.  Aunque la magnitud es menor que en el modelo de primeras diferencias los estimadores de ambos modelos sugieren que, un aumento en la probabilidad de tener condena luego de ser arrestado disminuye la tasa de criminalidad.
+
+-  $log(prbpris)$: En el modelo de primeras diferencias el coeficiente es negativo y significativo *(-0.177)*. Por otra parte, en el modelo de efectos fijos el coeficiente es negativo y significativo *(-0.192)*. Aunque la magnitud es menor que en el modelo de primeras diferencias los estimadores de ambos modelos sugieren que, un aumento en la probabilidad de ir a prisión disminuye la tasa de criminalidad.
+
+Por otra parte, en ambos modelos, la mayoría de los coeficientes de las variables asociadas a la justicia penal son estadísticamente significativos a un nivel de confianza muy alto, dado que el valor p es menor al nivel de significancia (p-valor < 0.001). 
+
+ 
+## ***Pregunta 4:*** 
+
+Realice un test de significancia estadística de los efectos fijos no observables $a_i$. Para ello use el comando
+pFtest(modelo_efecto_fijo, modelo_pooling), el cual realiza el test F discutido en clase (requiere como input los modelos estimados en 1 y en 3).
+
+$$Hipotesis\ nula: H_0 : a_i = 0 $$
+$$Hipotesis\ alternativa: H_1 : Al\ menos\ uno\ es\ significativo$$
+
+Si el valor p es menor que el nivel de significancia, se rechaza la hipótesis nula. 
+```{r comment="", echo=FALSE}
+pFtest(fijos, pooled)
+```
+El resultado arroja un valor-p muy pequeño de *0.00000000000000022*, lo que indica que existe una fuerte evidencia estadistica para rechazar la hipótesis nula. Finalmente se concluye que al menos uno de los efectos individuales es significativo con un $\alpha$ de *0.05*, es decir que el modelo en el cual se utiliza el metodo de los efectos fijos mejora significativamente el modelo en comparación con el modelo de mínimos cuadrados agrupados.
+
+
+## ***Pregunta 5:***
+
+Vuelva a estimar el modelo pero ahora use efectos aleatorios. ¿Existe un cambio notable (respecto a lo hallado en 3) en el signo o en la magnitud de los coeficientes de las variables asociadas a la justicia penal? Que conclusión podría sacar de la comparación de los modelos de efectos fijos y efectos aleatorios?
+
+
+```{r comment="", echo=FALSE}
+aleatorios <- plm(log(crmrte) ~ log(prbarr) + log(prbconv) + log(prbpris)  + log(avgsen) + log(polpc) + log(wcon) + log(wtuc) + log(wtrd) + log(wfir) + log(wser) + log(wmfg) + log(wfed) + log(wsta) + log(wloc), data = panel, model = "random")
+summary(aleatorios)
+```
+
+-   $\hat{\beta}_1\overset{\sim}{\log(prbarr)}$: Un aumento del 1% en la probabilidad de arresto disminuye, en promedio, un 0.461% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+-   $\hat{\beta}_2\overset{\sim}{\log(prbconv)}$: Un aumento del 1% en la probabilidad de condena disminuye, en promedio, un 0.355% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+-   $\hat{\beta}_3\overset{\sim}{\log(prbpris)}$: Un aumento del 1% en la probabilidad de sentencia de prisión disminuye, en promedio, 0.195% la tasa de criminalidad, manteniendo constantes las demás variables en el modelo.
+
+
+Al comparar los resultados del modelo de efectos aleatorios con los modelos de efectos fijos y de primeras diferencias, podemos observar algunas diferencias en los coeficientes de las variables asociadas a la justicia penal. 
+
+$log(prbarr)$: En el modelo de efectos aleatorios el coeficiente estimado es *(-0.461)*. Por otra parte, en el modelo de efectos fijos el coeficiente estimado es *(-0.226)*. Ambos modelos 
+
+$log(prbconv)$: En el modelo de efectos aleatorios el coeficiente estimado es *(-0.355)*. Por otra parte, el modelo de efectos fijos el coeficiente estimado es *(-0.137)*. 
+
+$log(prbpris)$: En el modelo de efectos aleatorios el coeficiente estimado es *(-0.195)*. Por otra parte, en el modelo de efectos fijos el coeficiente estimado es *(-0.133)*. 
+
+En el modelo de efectos aleatorios, los coeficientes tienen magnitudes y significancias estadísticas similares a los del modelo de efectos fijos, lo que indica que los efectos aleatorios no alteran sustancialmente las conclusiones sobre la relación entre las variables asociadas a la justicia penal y la tasa de criminalidad. Además, en ambos modelos, un aumento en la probabilidad de arresto, condena y sentencia de prisión se asocia con una disminución en la tasa de criminalidad.?????
+
+## ***Pregunta 6:*** 
+
+Realice el test de Hausman. Para ello use el comando phtest(modelo_efecto_fijo, modelo_efecto_aleatorio), el cual realiza el test de Hausman discutido en clase (requiere como input los modelos estimados en 3 y en 5). ¿Cuál es el mejor estimador, el de efectos fijos o el de efectos aleatorios?
+
+El test de Hausman se utiliza para determinar si es más apropiado utilizar un modelo de efectos fijos o un modelo de efectos aleatorios. 
+
+$$Hipotesis\ nula: H_0 : Cov(x_{kit},a_i ) = 0 ,\  \forall k$$
+$$Hipotesis\ alternativa: H_1 : Cov(x_{kit},a_i ) \neq 0, \ para \ algún \ k $$
+```{r echo=FALSE, comment=""}
+phtest(fijos, aleatorios)
+```
+
+Rechazamos H0. solo EF es consistente.
+

@@ -1,0 +1,110 @@
+---
+title: "**Ejercicio 4**"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fancyhdr}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhead{}
+  - \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+  - \fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+  - \fancypagestyle{plain}{
+      \fancyhead{}
+      \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+      \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+fontsize: 12pt
+geometry: margin=1in 
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\maketitle
+\vspace{-5em}
+\vspace{0.5em}
+```
+```{=tex}
+\begin{center}
+\footnotesize \textbf{Curso}: Econometría II \\
+\footnotesize \textbf{Profesor}: Mauricio Tejada \\
+\footnotesize \textbf{Estudiantes}: Dania Bustamante, Rosana Cardona, José Casanova \\
+\footnotesize 5 junio 2024 \\
+\end{center}
+```
+
+```{r setup, include=FALSE}
+library(tidyverse);library(lmtest);library(stargazer);library(readxl)
+options(scipen=999);library(nlme); library(dplyr);library(sandwich);library(car)
+
+#install.packages("forecast")
+#install.packages("tseries")
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("lubridate")
+#install.packages("dynlm")
+library(dynlm)
+library(forecast)
+library(tseries)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+```
+
+```{r}
+base <- read_excel("pib_fbkf_chile.xlsx", skip = 2)
+colnames(base) <- c("Periodo", "fbcf", "PIB")
+base$Periodo <- as.Date(base$Periodo, format="%Y-%m-%d")
+fbcf.t <- ts(base$fbcf, start = 1960, frequency = 12) 
+PIB.t <- ts(base$PIB, start = 1990, frequency = 12)
+```
+
+#Logaritmo y Diferencias
+```{r}
+# Definir las variables lxt y Δlxt
+base$lfbcf <- log(base$fbcf)
+base$lPIB <- log(base$PIB)
+
+base_diff <- data.frame(
+  Periodo = base$Periodo[-1],
+  dlFBCF = diff(base$lfbcf),
+  dlPIB = diff(base$lPIB)
+)
+
+
+```
+
+# Gráficos
+```{r}
+# Graficar xt y Δlxt para FBCF
+ggplot(base, aes(x = Periodo)) +
+  geom_line(aes(y = fbcf), color = "blue") +
+  labs(title = "FBCF vs Tiempo", y = "FBCF")
+
+ggplot(base_diff, aes(x = Periodo)) +
+  geom_line(aes(y = dlFBCF), color = "blue") +
+  labs(title = "ΔlFBCF vs Tiempo", y = "ΔlFBCF")
+
+# Graficar xt y Δlxt para PIB
+ggplot(base, aes(x = Periodo)) +
+  geom_line(aes(y = PIB), color = "red") +
+  labs(title = "PIB vs Tiempo", y = "PIB")
+
+ggplot(base_diff, aes(x = Periodo)) +
+  geom_line(aes(y = dlPIB), color = "red") +
+  labs(title = "ΔlPIB vs Tiempo", y = "ΔlPIB")
+```
+
+# Función de autocorrelación
+```{r}
+
+acf(base$lFBCF, main="ACF de lFBCF")
+acf(base_diff$dlFBCF, main="ACF de ΔlFBCF")
+
+acf(base$lPIB, main="ACF de lPIB")
+acf(base_diff$dlPIB, main="ACF de ΔlPIB")
+```
+

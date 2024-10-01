@@ -1,0 +1,162 @@
+---
+title: "**Ejercicio 3**"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fancyhdr}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhead{}
+  - \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+  - \fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+  - \fancypagestyle{plain}{
+      \fancyhead{}
+      \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+      \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+fontsize: 12pt
+geometry: margin=1in 
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\maketitle
+\vspace{-5em}
+\vspace{0.5em}
+```
+```{=tex}
+\begin{center}
+\footnotesize \textbf{Curso}: Econometría II \\
+\footnotesize \textbf{Profesor}: Mauricio Tejada \\
+\footnotesize \textbf{Estudiantes}: Dania Bustamante, Rosana Cardona, José Casanova \\
+\footnotesize 5 junio 2024 \\
+\end{center}
+```
+
+```{r setup, include=FALSE}
+library(tidyverse);library(lmtest);library(stargazer);library(readxl)
+options(scipen=999);library(nlme); library(dplyr);library(sandwich);library(car)
+
+#install.packages("forecast")
+#install.packages("tseries")
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("lubridate")
+#install.packages("dynlm")
+library(dynlm)
+
+
+library(forecast)
+library(tseries)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+```
+
+
+
+# ***Pregunta 1:***
+Creación variables logaritmicas y diferencias
+```{r}
+
+base <- read_excel("pib_fbkf_chile.xlsx", skip = 2)
+colnames(base) <- c("Periodo", "fbcf", "PIB")
+base$Periodo <- as.Date(base$Periodo, format="%Y-%m-%d")
+
+base <- base %>%  mutate(log_PIB = log(PIB), log_fbcf = log(fbcf))
+
+
+base <- base %>%   mutate(d_log_PIB = log_PIB - lag(log_PIB),d_log_fbcf = log_fbcf - lag(log_fbcf)) %>%  na.omit()
+
+fbcf.t <- ts(base$fbcf, start = 1960, frequency = 12)
+PIB.t <- ts(base$PIB, start = 1960, frequency = 12)
+d_log_fbcf.t <- ts(base$d_log_fbcf, start = 1960, frequency = 12)
+d_log_PIB.t <- ts(base$d_log_PIB, start = 1960, frequency = 12)
+
+```
+
+
+Gráficos
+
+```{r}
+ggplot(base, aes(x = Periodo)) +
+  geom_line(aes(y = PIB), color = "black") +
+  labs(title = "PIB", x = "Periodo", y = "PIB") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(base, aes(x = Periodo)) +
+  geom_line(aes(y = d_log_PIB), color = "black") +
+  labs(title = "Dif log del PIB", x = "Periodo", y = "Dif log(PIB)") + theme_minimal()
+```
+
+```{r}
+ggplot(base, aes(x = Periodo)) +
+  geom_line(aes(y = fbcf), color = "black") +
+  labs(title = "fbcf", x = "Periodo", y = "fbcf") +   theme_minimal()
+```
+
+```{r}
+ggplot(base, aes(x = Periodo)) +
+  geom_line(aes(y = d_log_fbcf), color = "black") +
+  labs(title = "Dif log de la fbcf", x = "Periodo", y = "Dif log(fbcf)") +   theme_minimal()
+```
+
+Funciones de Autocorrelación
+
+```{r}
+acf(base$log_PIB, main = "Función de Autocorrelación del log(PIB)")
+```
+
+```{r}
+acf(base$d_log_PIB, main = "Función de Autocorrelación de Dif log(PIB)", na.action = na.pass)
+```
+
+```{r}
+acf(base$log_fbcf, main = "Función de Autocorrelación del log(fbcf)")
+```
+
+```{r}
+acf(base$d_log_fbcf, main = "Función de Autocorrelación de Dif log(fbcf)", na.action = na.pass)
+```
+
+# ***Pregunta 2:***
+
+```{r}
+# Estimar modelos AR para Δlog(PIB)
+model_ar1_pib <- dynlm(d_log_PIB.t ~ L(d_log_PIB.t, 1))
+model_ar2_pib <- dynlm(d_log_PIB.t ~ L(d_log_PIB.t, 1) + L(d_log_PIB.t, 2))
+model_ar3_pib <- dynlm(d_log_PIB.t ~ L(d_log_PIB.t, 1) + L(d_log_PIB.t, 2) + L(d_log_PIB.t, 3))
+model_ar4_pib <- dynlm(d_log_PIB.t ~ L(d_log_PIB.t, 1) + L(d_log_PIB.t, 2) + L(d_log_PIB.t, 3) + L(d_log_PIB.t, 4))
+
+# Calcular AIC para Δlog(PIB)
+aic_ar1_pib <- AIC(model_ar1_pib)
+aic_ar2_pib <- AIC(model_ar2_pib)
+aic_ar3_pib <- AIC(model_ar3_pib)
+aic_ar4_pib <- AIC(model_ar4_pib)
+
+# Estimar modelos AR para Δlog(FBCF)
+model_ar1_fbcf <- dynlm(d_log_fbcf.t ~ L(d_log_fbcf.t, 1))
+model_ar2_fbcf <- dynlm(d_log_fbcf.t ~ L(d_log_fbcf.t, 1) + L(d_log_fbcf.t, 2))
+model_ar3_fbcf <- dynlm(d_log_fbcf.t ~ L(d_log_fbcf.t, 1) + L(d_log_fbcf.t, 2) + L(d_log_fbcf.t, 3))
+model_ar4_fbcf <- dynlm(d_log_fbcf.t ~ L(d_log_fbcf.t, 1) + L(d_log_fbcf.t, 2) + L(d_log_fbcf.t, 3) + L(d_log_fbcf.t, 4))
+
+# Calcular AIC para Δlog(FBCF)
+aic_ar1_fbcf <- AIC(model_ar1_fbcf)
+aic_ar2_fbcf <- AIC(model_ar2_fbcf)
+aic_ar3_fbcf <- AIC(model_ar3_fbcf)
+aic_ar4_fbcf <- AIC(model_ar4_fbcf)
+
+# Crear data frame con los resultados
+aic_results <- data.frame(
+  Model = c("AR(1)", "AR(2)", "AR(3)", "AR(4)"),
+  AIC_PIB = c(aic_ar1_pib, aic_ar2_pib, aic_ar3_pib, aic_ar4_pib),
+  AIC_fbcf = c(aic_ar1_fbcf, aic_ar2_fbcf, aic_ar3_fbcf, aic_ar4_fbcf)
+)
+```
+
+
